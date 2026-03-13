@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kinetic Logic</string>
+    <string name="title_activity_main">Kinetic Logic</string>
+    <string name="package_name">com.kineticlogic.app</string>
+    <string name="custom_url_scheme">com.kineticlogic.app</string>
+</resources>

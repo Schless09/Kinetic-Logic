@@ -6,7 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:mobile": "BUILD_FOR_CAPACITOR=1 next build && npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android",
+    "cap:sync": "npx cap sync",
+    "python:setup": "cd python && python -m venv .venv && node ../scripts/run-python.js -m pip install -r requirements.txt",
+    "python:process": "node scripts/run-python.js process.py",
+    "python:train": "node scripts/run-python.js train.py",
+    "python:evaluate": "node scripts/run-python.js evaluate.py",
+    "python:fixture": "node scripts/run-python.js make_fixture.py"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

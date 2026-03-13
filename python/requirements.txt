@@ -1,0 +1,14 @@
+# Video + data processing
+numpy>=1.24,<3
+pandas>=2.0
+pyarrow>=14.0
+ffmpeg-python>=0.2.0
+Pillow>=10.0
+
+# Training
+torch>=2.0
+torchvision>=0.15
+
+# Optional: fetch from Supabase (httpx>=0.27 uses httpcore 2.x, avoids h11 conflict with wsproto)
+httpx>=0.27.0
+python-dotenv>=1.0.0
