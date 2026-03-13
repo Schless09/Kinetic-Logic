@@ -12,8 +12,11 @@ type SessionRow = {
   status: string;
   task_id: string | null;
   organization_id: string;
-  tasks: { name: string; bounty_cents?: number | null } | null;
-  organizations: { name: string } | null;
+  tasks:
+    | { name: string; bounty_cents?: number | null }
+    | { name: string; bounty_cents?: number | null }[]
+    | null;
+  organizations: { name: string } | { name: string }[] | null;
   session_reviews?: { status: string; payout_cents: number | null } | { status: string; payout_cents: number | null }[] | null;
 };
 
@@ -101,25 +104,34 @@ export default function DashboardPage() {
                 {sessions.map((s) => (
                   <li key={s.id} className="py-3 first:pt-0 last:pb-0">
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-sm font-medium text-foreground">
-                        {s.tasks?.name ?? "No task"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {s.organizations?.name ?? "—"} · {formatDateTime(s.created_at)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(() => {
-                          const r = s.session_reviews;
-                          const single = Array.isArray(r) ? r[0] : r;
-                          const reviewStatus = single?.status ?? "pending";
-                          const payout = single?.payout_cents ?? null;
-                          const posted = (s.tasks as { bounty_cents?: number | null } | null)?.bounty_cents ?? null;
+                      {(() => {
+                        const t = s.tasks;
+                        const singleTask = Array.isArray(t) ? t[0] : t;
+                        const org = s.organizations;
+                        const singleOrg = Array.isArray(org) ? org[0] : org;
+                        const bounty = singleTask?.bounty_cents ?? null;
+                        const bountyText = bounty !== null ? `Bounty: $${(bounty / 100).toFixed(2)}` : "Bounty: —";
+                        const r = s.session_reviews;
+                        const singleReview = Array.isArray(r) ? r[0] : r;
+                        const reviewStatus = singleReview?.status ?? "pending";
+                        const payout = singleReview?.payout_cents ?? null;
+                        const payoutText = payout !== null ? ` · Earned: $${(payout / 100).toFixed(2)}` : "";
 
-                          const postedText = posted !== null ? `Bounty: $${(posted / 100).toFixed(2)}` : "Bounty: —";
-                          const payoutText = payout !== null ? ` · Earned: $${(payout / 100).toFixed(2)}` : "";
-                          return `${postedText} · Review: ${reviewStatus}${payoutText}`;
-                        })()}
-                      </p>
+                        return (
+                          <>
+                            <p className="text-sm font-medium text-foreground">
+                              {singleTask?.name ?? "No task"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {singleOrg?.name ?? "—"} · {formatDateTime(s.created_at)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {bountyText} · Review: {reviewStatus}
+                              {payoutText}
+                            </p>
+                          </>
+                        );
+                      })()}
                       <p className="text-xs text-muted-foreground font-mono">
                         {s.id}
                       </p>
