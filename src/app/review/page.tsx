@@ -17,14 +17,30 @@ type ReviewQueueRow = {
   created_at: string;
   session_id: string;
   organization_id: string;
-  sessions: {
-    id: string;
-    created_at: string;
-    expert_id: string;
-    task_id: string | null;
-    organizations: { name: string } | null;
-    tasks: { name: string; bounty_cents: number | null } | null;
-  } | null;
+  sessions:
+    | {
+        id: string;
+        created_at: string;
+        expert_id: string;
+        task_id: string | null;
+        organizations: { name: string } | { name: string }[] | null;
+        tasks:
+          | { name: string; bounty_cents: number | null }
+          | { name: string; bounty_cents: number | null }[]
+          | null;
+      }
+    | {
+        id: string;
+        created_at: string;
+        expert_id: string;
+        task_id: string | null;
+        organizations: { name: string } | { name: string }[] | null;
+        tasks:
+          | { name: string; bounty_cents: number | null }
+          | { name: string; bounty_cents: number | null }[]
+          | null;
+      }[]
+    | null;
 };
 
 function formatDateTime(iso: string): string {
@@ -98,7 +114,11 @@ export default function ReviewPage() {
     // Initialize payout drafts from task bounty (if present)
     const nextDraft: Record<string, string> = {};
     for (const r of list) {
-      const suggested = r.payout_cents ?? r.sessions?.tasks?.bounty_cents ?? null;
+      const s = r.sessions;
+      const singleSession = Array.isArray(s) ? s[0] : s;
+      const taskObj = singleSession?.tasks;
+      const singleTask = Array.isArray(taskObj) ? taskObj[0] : taskObj;
+      const suggested = r.payout_cents ?? singleTask?.bounty_cents ?? null;
       if (suggested !== null) nextDraft[r.id] = (suggested / 100).toString();
     }
     setPayoutDraft((prev) => ({ ...nextDraft, ...prev }));
@@ -205,9 +225,16 @@ export default function ReviewPage() {
             {!loading && !error && canReview && pending.length > 0 && (
               <ul className="divide-y divide-border rounded-lg border border-border">
                 {pending.map((r) => {
-                  const orgName = r.sessions?.organizations?.name ?? r.organization_id;
-                  const taskName = r.sessions?.tasks?.name ?? "No task";
-                  const suggested = r.sessions?.tasks?.bounty_cents ?? null;
+                  const s = r.sessions;
+                  const singleSession = Array.isArray(s) ? s[0] : s;
+                  const orgObj = singleSession?.organizations;
+                  const singleOrg = Array.isArray(orgObj) ? orgObj[0] : orgObj;
+                  const taskObj = singleSession?.tasks;
+                  const singleTask = Array.isArray(taskObj) ? taskObj[0] : taskObj;
+
+                  const orgName = singleOrg?.name ?? r.organization_id;
+                  const taskName = singleTask?.name ?? "No task";
+                  const suggested = singleTask?.bounty_cents ?? null;
                   return (
                     <li key={r.id} className="p-3">
                       <div className="flex flex-col gap-2">

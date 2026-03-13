@@ -15,7 +15,7 @@ type JobRow = {
   session_id: string | null;
   attempts: number;
   error: string | null;
-  organizations: { name: string } | null;
+  organizations: { name: string } | { name: string }[] | null;
 };
 
 type ArtifactRow = {
@@ -25,7 +25,7 @@ type ArtifactRow = {
   job_id: string;
   type: string;
   file_url: string;
-  organizations: { name: string } | null;
+  organizations: { name: string } | { name: string }[] | null;
 };
 
 function formatDateTime(iso: string): string {
@@ -42,7 +42,9 @@ export default function OpsPage() {
   const jobsByOrg = useMemo(() => {
     const map = new Map<string, JobRow[]>();
     for (const j of jobs) {
-      const key = j.organizations?.name ?? j.organization_id;
+      const org = j.organizations;
+      const singleOrg = Array.isArray(org) ? org[0] : org;
+      const key = singleOrg?.name ?? j.organization_id;
       const arr = map.get(key) ?? [];
       arr.push(j);
       map.set(key, arr);
@@ -185,7 +187,8 @@ export default function OpsPage() {
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="text-sm font-medium">{a.type}</span>
                         <span className="text-xs text-muted-foreground">
-                          {a.organizations?.name ?? a.organization_id}
+                          {(Array.isArray(a.organizations) ? a.organizations[0] : a.organizations)?.name ??
+                            a.organization_id}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
