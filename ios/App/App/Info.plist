@@ -45,5 +45,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Kinetic Logic needs camera access to record task demonstrations for training data.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kinetic Logic needs microphone access to record audio with your task demonstrations.</string>
 </dict>
 </plist>

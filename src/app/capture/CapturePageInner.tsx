@@ -143,36 +143,6 @@ export function CapturePageInner() {
     return (selectedTask.required_hardware_tags ?? []).every((tag) => have.has(tag));
   }, [hardwareTags, selectedTask]);
 
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
-      const mimeType = MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm";
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_500_000 });
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size) chunksRef.current.push(e.data);
-      };
-      recorder.start(500);
-      mediaRecorderRef.current = recorder;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Camera or microphone access failed";
-      setErrorMessage(
-        msg.includes("Permission") || msg.includes("NotAllowed") || msg.includes("denied")
-          ? "Camera and microphone access are required. Please allow both when prompted."
-          : msg
-      );
-      setStatus("error");
-    }
-  }, []);
-
   const stopRecording = useCallback((): Promise<Blob> => {
     return new Promise((resolve) => {
       const recorder = mediaRecorderRef.current;
@@ -197,12 +167,34 @@ export function CapturePageInner() {
     setErrorMessage(null);
     setUploadResult(null);
 
+    // iOS requires getUserMedia to be started in the same user gesture as the tap.
+    // Request media immediately (no await before this), then do the rest after we have the stream.
+    const streamPromise = navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: true,
+    });
+
+    let stream: MediaStream;
+    try {
+      stream = await streamPromise;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Camera or microphone access failed";
+      setErrorMessage(
+        msg.includes("Permission") || msg.includes("NotAllowed") || msg.includes("denied")
+          ? "Camera and microphone access are required. Allow access when prompted, then try again."
+          : msg
+      );
+      setStatus("error");
+      return;
+    }
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
     const expertId = user?.id ?? null;
     expertIdRef.current = expertId;
     if (!expertId) {
+      stream.getTracks().forEach((t) => t.stop());
       setErrorMessage("Sign in required to capture.");
       setStatus("error");
       return;
@@ -211,6 +203,7 @@ export function CapturePageInner() {
     const organizationId = selectedOrganizationId ?? null;
     organizationIdRef.current = organizationId;
     if (!organizationId || !organizations.some((o) => o.id === organizationId)) {
+      stream.getTracks().forEach((t) => t.stop());
       setErrorMessage("Select an organization to record for.");
       setStatus("error");
       return;
@@ -230,16 +223,30 @@ export function CapturePageInner() {
       latestConsentId
     );
     if (sessionError || !sessionId) {
+      stream.getTracks().forEach((t) => t.stop());
       setErrorMessage(sessionError ?? "Failed to create session");
       setStatus("error");
       return;
     }
     sessionIdRef.current = sessionId;
 
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm";
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_500_000 });
+    chunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size) chunksRef.current.push(e.data);
+    };
+    recorder.start(500);
+    mediaRecorderRef.current = recorder;
+
     await startSensors();
-    await startRecording();
     setStatus("recording");
-  }, [startSensors, startRecording, selectedTask, selectedOrganizationId, organizations, latestConsentId]);
+  }, [startSensors, selectedTask, selectedOrganizationId, organizations, latestConsentId]);
 
   const handleStopCapture = useCallback(async () => {
     if (status !== "recording") return;
